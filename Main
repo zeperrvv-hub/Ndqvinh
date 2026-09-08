@@ -1,0 +1,53 @@
+using EmployeeHierarchy;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace EMPLOYEE_HIERARCHY
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.OutputEncoding = Encoding.UTF8;
+            Console.Write("Nhập năm hiện tại: ");
+            int currentYear = int.Parse(Console.ReadLine());
+            Console.WriteLine("\n===== NHẬP NHÂN VIÊN =====");
+            Console.Write("Nhập mã nhân viên: ");
+            string employeeId = Console.ReadLine();
+            Console.Write("Nhập họ tên: ");
+            string employeeName = Console.ReadLine();
+            Console.Write("Nhập năm sinh: ");
+            int employeeBirthYear = int.Parse(Console.ReadLine());
+            Console.Write("Nhập lương cơ bản: ");
+            decimal employeeSalary = decimal.Parse(Console.ReadLine());
+            Employee employee = new Employee( employeeId, employeeName, employeeBirthYear, employeeSalary );
+            Console.WriteLine("\n===== NHẬP QUẢN LÝ =====");
+            Console.Write("Nhập mã quản lý: ");
+            string managerId = Console.ReadLine();
+            Console.Write("Nhập họ tên: ");
+            string managerName = Console.ReadLine();
+            Console.Write("Nhập năm sinh: ");
+            int managerBirthYear = int.Parse(Console.ReadLine());
+            Console.Write("Nhập lương cơ bản: ");
+            decimal managerSalary = decimal.Parse(Console.ReadLine());
+            Console.Write("Nhập phụ cấp trách nhiệm: ");
+            decimal allowance = decimal.Parse(Console.ReadLine());
+            Manager manager = new Manager( managerId, managerName, managerBirthYear, managerSalary, allowance);
+            Console.WriteLine("\n\n========== PHIẾU LƯƠNG NHÂN VIÊN ==========");
+            Console.WriteLine($"Mã nhân viên: {employee.Id}");
+            Console.WriteLine($"Họ tên: {employee.FullName}");
+            Console.WriteLine($"Tuổi: {employee.GetAge(currentYear)}");
+            Console.WriteLine($"Lương cơ bản: {employee.BaseSalary:N0} VNĐ");
+            Console.WriteLine( $"Thu nhập: {employee.CalculateIncome():N0} VNĐ");
+            Console.WriteLine("\n========== PHIẾU LƯƠNG QUẢN LÝ ==========");
+            Console.WriteLine($"Mã quản lý: {manager.Id}");
+            Console.WriteLine($"Họ tên: {manager.FullName}");
+            Console.WriteLine($"Tuổi: {manager.GetAge(currentYear)}");
+            Console.WriteLine($"Lương cơ bản: {manager.BaseSalary:N0} VNĐ");
+            Console.WriteLine($"Phụ cấp: {manager.ResponsibilityAllowance:N0} VNĐ");
+            Console.WriteLine($"Thu nhập: {manager.CalculateIncome():N0} VNĐ");
+            Console.WriteLine("\nNhấn phím bất kỳ để thoát...");
+        }
+    }
+}
