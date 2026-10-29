@@ -1,0 +1,18 @@
+using System.Data.SqlClient;
+
+namespace CafePOS
+{
+    class DB
+    {
+        public static string ChuoiKetNoi =
+            @"Data Source=.\SQLEXPRESS;
+              Initial Catalog=CafePOSDB;
+              Integrated Security=True;
+              TrustServerCertificate=True";
+
+        public static SqlConnection KetNoi()
+        {
+            return new SqlConnection(ChuoiKetNoi);
+        }
+    }
+}
