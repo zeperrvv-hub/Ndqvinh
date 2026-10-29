@@ -1,0 +1,75 @@
+using System;
+using System.Data;
+using InventoryManagement.DAL;
+
+namespace InventoryManagement.BUS
+{
+    public class InventoryBUS
+    {
+        InventoryDAL dal = new InventoryDAL();
+
+        public DataTable GetVatTu(string keyword)
+        {
+            return dal.GetVatTu(keyword);
+        }
+
+        public DataTable GetNhaCungCap()
+        {
+            return dal.GetNhaCungCap();
+        }
+
+        public DataTable GetPhieuKho()
+        {
+            return dal.GetPhieuKho();
+        }
+
+        public void SaveVatTu(
+            string ma, string ten, string dvt,
+            decimal ton, bool sua)
+        {
+            if (string.IsNullOrWhiteSpace(ma) ||
+                string.IsNullOrWhiteSpace(ten))
+                throw new Exception("Mã và tên vật tư không được để trống.");
+
+            if (ton < 0)
+                throw new Exception("Số lượng tồn không được âm.");
+
+            dal.SaveVatTu(ma, ten, dvt, ton, sua);
+        }
+
+        public void DeleteVatTu(string ma)
+        {
+            dal.DeleteVatTu(ma);
+        }
+
+        public void SaveNCC(
+            string ten, string sdt, string diachi, int ma = 0)
+        {
+            if (string.IsNullOrWhiteSpace(ten))
+                throw new Exception("Tên nhà cung cấp không được để trống.");
+
+            dal.SaveNCC(ten, sdt, diachi, ma);
+        }
+
+        public void DeleteNCC(int ma)
+        {
+            dal.DeleteNCC(ma);
+        }
+
+        public void LuuPhieu(
+            string loai, int maNCC, DataTable chiTiet)
+        {
+            dal.LuuPhieu(loai, maNCC, chiTiet);
+        }
+
+        public DataTable CanhBaoTon(decimal nguong)
+        {
+            return dal.CanhBaoTon(nguong);
+        }
+
+        public decimal TongGiaTriTon()
+        {
+            return dal.TongGiaTriTon();
+        }
+    }
+}

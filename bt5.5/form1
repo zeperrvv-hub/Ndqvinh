@@ -1,0 +1,484 @@
+using System;
+using System.Data;
+using System.Drawing;
+using System.Windows.Forms;
+using InventoryManagement.BUS;
+
+namespace InventoryManagement
+{
+    public class Form1 : Form
+    {
+        InventoryBUS bus = new InventoryBUS();
+
+        DataGridView dgvVatTu = new DataGridView();
+        DataGridView dgvNCC = new DataGridView();
+        DataGridView dgvChiTiet = new DataGridView();
+        DataGridView dgvPhieu = new DataGridView();
+        DataGridView dgvCanhBao = new DataGridView();
+
+        TextBox txtMa = new TextBox();
+        TextBox txtTen = new TextBox();
+        TextBox txtDVT = new TextBox();
+        TextBox txtTim = new TextBox();
+
+        TextBox txtTenNCC = new TextBox();
+        TextBox txtSDT = new TextBox();
+        TextBox txtDiaChi = new TextBox();
+
+        ComboBox cboLoai = new ComboBox();
+        ComboBox cboNCC = new ComboBox();
+        ComboBox cboVatTu = new ComboBox();
+
+        NumericUpDown numTon = new NumericUpDown();
+        NumericUpDown numSL = new NumericUpDown();
+        NumericUpDown numGia = new NumericUpDown();
+        NumericUpDown numNguong = new NumericUpDown();
+
+        Label lblTongTon = new Label();
+
+        DataTable chiTiet = new DataTable();
+
+        public Form1()
+        {
+            Text = "QUẢN LÝ NHẬP XUẤT KHO";
+            Size = new Size(1150, 720);
+            StartPosition = FormStartPosition.CenterScreen;
+
+            TabControl tabs = new TabControl();
+            tabs.Dock = DockStyle.Fill;
+            Controls.Add(tabs);
+
+            // TAB 1: VẬT TƯ
+            TabPage t1 = new TabPage("Vật tư");
+            tabs.TabPages.Add(t1);
+
+            FlowLayoutPanel p1 = new FlowLayoutPanel();
+            p1.Dock = DockStyle.Top;
+            p1.Height = 125;
+            p1.Padding = new Padding(8);
+            p1.AutoScroll = true;
+            t1.Controls.Add(p1);
+
+            txtMa.Width = 100;
+            txtTen.Width = 150;
+            txtDVT.Width = 80;
+            txtTim.Width = 130;
+
+            numTon.DecimalPlaces = 2;
+            numTon.Maximum = 100000000;
+
+            Button bThem = new Button { Text = "Thêm" };
+            Button bSua = new Button { Text = "Sửa" };
+            Button bXoa = new Button { Text = "Xóa" };
+            Button bTim = new Button { Text = "Tìm kiếm" };
+
+            p1.Controls.AddRange(new Control[]
+            {
+                new Label { Text="Mã", AutoSize=true },
+                txtMa,
+                new Label { Text="Tên vật tư", AutoSize=true },
+                txtTen,
+                new Label { Text="Đơn vị", AutoSize=true },
+                txtDVT,
+                new Label { Text="Tồn đầu", AutoSize=true },
+                numTon,
+                bThem, bSua, bXoa,
+                new Label { Text="Tìm", AutoSize=true },
+                txtTim, bTim
+            });
+
+            dgvVatTu.Dock = DockStyle.Fill;
+            dgvVatTu.ReadOnly = true;
+            dgvVatTu.AllowUserToAddRows = false;
+            dgvVatTu.SelectionMode =
+                DataGridViewSelectionMode.FullRowSelect;
+            dgvVatTu.AutoSizeColumnsMode =
+                DataGridViewAutoSizeColumnsMode.Fill;
+            t1.Controls.Add(dgvVatTu);
+
+            // TAB 2: NHÀ CUNG CẤP
+            TabPage t2 = new TabPage("Nhà cung cấp");
+            tabs.TabPages.Add(t2);
+
+            FlowLayoutPanel p2 = new FlowLayoutPanel();
+            p2.Dock = DockStyle.Top;
+            p2.Height = 90;
+            p2.Padding = new Padding(8);
+            t2.Controls.Add(p2);
+
+            txtTenNCC.Width = 160;
+            txtSDT.Width = 120;
+            txtDiaChi.Width = 160;
+
+            Button bNCCThem = new Button { Text = "Thêm NCC" };
+            Button bNCCSua = new Button { Text = "Sửa NCC" };
+            Button bNCCXoa = new Button { Text = "Xóa NCC" };
+
+            p2.Controls.AddRange(new Control[]
+            {
+                new Label { Text="Tên NCC", AutoSize=true },
+                txtTenNCC,
+                new Label { Text="Điện thoại", AutoSize=true },
+                txtSDT,
+                new Label { Text="Địa chỉ", AutoSize=true },
+                txtDiaChi,
+                bNCCThem, bNCCSua, bNCCXoa
+            });
+
+            dgvNCC.Dock = DockStyle.Fill;
+            dgvNCC.ReadOnly = true;
+            dgvNCC.AllowUserToAddRows = false;
+            dgvNCC.SelectionMode =
+                DataGridViewSelectionMode.FullRowSelect;
+            dgvNCC.AutoSizeColumnsMode =
+                DataGridViewAutoSizeColumnsMode.Fill;
+            t2.Controls.Add(dgvNCC);
+
+            // TAB 3: NHẬP XUẤT
+            TabPage t3 = new TabPage("Phiếu kho");
+            tabs.TabPages.Add(t3);
+
+            FlowLayoutPanel p3 = new FlowLayoutPanel();
+            p3.Dock = DockStyle.Top;
+            p3.Height = 100;
+            p3.Padding = new Padding(8);
+            p3.AutoScroll = true;
+            t3.Controls.Add(p3);
+
+            cboLoai.Items.AddRange(new object[] { "NHAP", "XUAT" });
+            cboLoai.SelectedIndex = 0;
+            cboLoai.Width = 80;
+
+            cboNCC.Width = 150;
+            cboVatTu.Width = 150;
+
+            numSL.DecimalPlaces = 2;
+            numSL.Minimum = 0.01M;
+            numSL.Maximum = 100000000;
+            numSL.Value = 1;
+
+            numGia.DecimalPlaces = 2;
+            numGia.Maximum = 100000000;
+
+            Button bThemCT = new Button { Text = "Thêm vật tư" };
+            Button bXoaCT = new Button { Text = "Xóa dòng" };
+            Button bLuuPhieu = new Button { Text = "Lưu phiếu" };
+
+            p3.Controls.AddRange(new Control[]
+            {
+                new Label { Text="Loại phiếu", AutoSize=true },
+                cboLoai,
+                new Label { Text="Nhà cung cấp", AutoSize=true },
+                cboNCC,
+                new Label { Text="Vật tư", AutoSize=true },
+                cboVatTu,
+                new Label { Text="Số lượng", AutoSize=true },
+                numSL,
+                new Label { Text="Đơn giá", AutoSize=true },
+                numGia,
+                bThemCT, bXoaCT, bLuuPhieu
+            });
+
+            chiTiet.Columns.Add("MaVatTu", typeof(string));
+            chiTiet.Columns.Add("TenVatTu", typeof(string));
+            chiTiet.Columns.Add("SoLuong", typeof(decimal));
+            chiTiet.Columns.Add("DonGia", typeof(decimal));
+            chiTiet.Columns.Add("ThanhTien", typeof(decimal));
+
+            dgvChiTiet.Dock = DockStyle.Fill;
+            dgvChiTiet.ReadOnly = true;
+            dgvChiTiet.AllowUserToAddRows = false;
+            dgvChiTiet.SelectionMode =
+                DataGridViewSelectionMode.FullRowSelect;
+            dgvChiTiet.AutoSizeColumnsMode =
+                DataGridViewAutoSizeColumnsMode.Fill;
+            dgvChiTiet.DataSource = chiTiet;
+            t3.Controls.Add(dgvChiTiet);
+
+            // TAB 4: CẢNH BÁO VÀ BÁO CÁO
+            TabPage t4 = new TabPage("Báo cáo tồn kho");
+            tabs.TabPages.Add(t4);
+
+            FlowLayoutPanel p4 = new FlowLayoutPanel();
+            p4.Dock = DockStyle.Top;
+            p4.Height = 70;
+            p4.Padding = new Padding(8);
+            t4.Controls.Add(p4);
+
+            numNguong.Maximum = 100000000;
+            numNguong.Value = 10;
+
+            Button bCanhBao = new Button { Text = "Cảnh báo tồn" };
+            Button bTongTon = new Button { Text = "Tính giá trị tồn" };
+
+            lblTongTon.AutoSize = true;
+            lblTongTon.Font = new Font("Arial", 11, FontStyle.Bold);
+
+            p4.Controls.AddRange(new Control[]
+            {
+                new Label { Text="Ngưỡng", AutoSize=true },
+                numNguong, bCanhBao, bTongTon, lblTongTon
+            });
+
+            dgvCanhBao.Dock = DockStyle.Fill;
+            dgvCanhBao.ReadOnly = true;
+            dgvCanhBao.AllowUserToAddRows = false;
+            dgvCanhBao.AutoSizeColumnsMode =
+                DataGridViewAutoSizeColumnsMode.Fill;
+            t4.Controls.Add(dgvCanhBao);
+
+            // SỰ KIỆN VẬT TƯ
+            bThem.Click += (s, e) => LuuVatTu(false);
+            bSua.Click += (s, e) => LuuVatTu(true);
+
+            bXoa.Click += (s, e) =>
+            {
+                try
+                {
+                    bus.DeleteVatTu(txtMa.Text.Trim());
+                    TaiDuLieu();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        "Không thể xóa vật tư đã có phiếu kho.\n" +
+                        ex.Message);
+                }
+            };
+
+            bTim.Click += (s, e) =>
+            {
+                dgvVatTu.DataSource = bus.GetVatTu(txtTim.Text.Trim());
+            };
+
+            dgvVatTu.CellClick += (s, e) =>
+            {
+                if (e.RowIndex >= 0)
+                {
+                    DataGridViewRow r = dgvVatTu.Rows[e.RowIndex];
+
+                    txtMa.Text = r.Cells["MaVatTu"].Value.ToString();
+                    txtTen.Text = r.Cells["TenVatTu"].Value.ToString();
+                    txtDVT.Text = r.Cells["DVT"].Value.ToString();
+                    numTon.Value = Convert.ToDecimal(
+                        r.Cells["SoLuongTon"].Value);
+                }
+            };
+
+            // SỰ KIỆN NHÀ CUNG CẤP
+            bNCCThem.Click += (s, e) => LuuNCC(false);
+            bNCCSua.Click += (s, e) => LuuNCC(true);
+
+            bNCCXoa.Click += (s, e) =>
+            {
+                try
+                {
+                    if (dgvNCC.CurrentRow == null)
+                        return;
+
+                    int id = Convert.ToInt32(
+                        dgvNCC.CurrentRow.Cells["MaNCC"].Value);
+
+                    bus.DeleteNCC(id);
+                    TaiDuLieu();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        "Không thể xóa nhà cung cấp đang được sử dụng.\n" +
+                        ex.Message);
+                }
+            };
+
+            dgvNCC.CellClick += (s, e) =>
+            {
+                if (e.RowIndex >= 0)
+                {
+                    DataGridViewRow r = dgvNCC.Rows[e.RowIndex];
+
+                    txtTenNCC.Text = r.Cells["TenNCC"].Value.ToString();
+
+                    txtSDT.Text =
+                        r.Cells["DienThoai"].Value == DBNull.Value
+                        ? "" : r.Cells["DienThoai"].Value.ToString();
+
+                    txtDiaChi.Text =
+                        r.Cells["DiaChi"].Value == DBNull.Value
+                        ? "" : r.Cells["DiaChi"].Value.ToString();
+                }
+            };
+
+            // SỰ KIỆN PHIẾU KHO
+            bThemCT.Click += (s, e) =>
+            {
+                if (cboVatTu.SelectedValue == null)
+                    return;
+
+                DataRow r = chiTiet.NewRow();
+
+                r["MaVatTu"] = cboVatTu.SelectedValue.ToString();
+                r["TenVatTu"] = cboVatTu.Text;
+                r["SoLuong"] = numSL.Value;
+                r["DonGia"] = numGia.Value;
+                r["ThanhTien"] = numSL.Value * numGia.Value;
+
+                chiTiet.Rows.Add(r);
+            };
+
+            bXoaCT.Click += (s, e) =>
+            {
+                if (dgvChiTiet.CurrentRow != null &&
+                    !dgvChiTiet.CurrentRow.IsNewRow)
+                {
+                    dgvChiTiet.Rows.Remove(
+                        dgvChiTiet.CurrentRow);
+                }
+            };
+
+            cboLoai.SelectedIndexChanged += (s, e) =>
+            {
+                bool nhap = cboLoai.Text == "NHAP";
+                cboNCC.Enabled = nhap;
+            };
+
+            bLuuPhieu.Click += (s, e) => LuuPhieu();
+
+            // BÁO CÁO
+            bCanhBao.Click += (s, e) =>
+            {
+                dgvCanhBao.DataSource =
+                    bus.CanhBaoTon(numNguong.Value);
+            };
+
+            bTongTon.Click += (s, e) =>
+            {
+                try
+                {
+                    decimal tong = bus.TongGiaTriTon();
+                    lblTongTon.Text =
+                        "Tổng giá trị theo phiếu nhập: " +
+                        tong.ToString("N0") + " đ";
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            };
+
+            Load += (s, e) =>
+            {
+                try
+                {
+                    TaiDuLieu();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        "Lỗi kết nối SQL Server: " + ex.Message);
+                }
+            };
+        }
+
+        void LuuVatTu(bool sua)
+        {
+            try
+            {
+                bus.SaveVatTu(
+                    txtMa.Text,
+                    txtTen.Text,
+                    txtDVT.Text,
+                    numTon.Value,
+                    sua);
+
+                MessageBox.Show("Lưu vật tư thành công.");
+                TaiDuLieu();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        void LuuNCC(bool sua)
+        {
+            try
+            {
+                int id = 0;
+
+                if (sua)
+                {
+                    if (dgvNCC.CurrentRow == null)
+                        throw new Exception("Hãy chọn nhà cung cấp cần sửa.");
+
+                    id = Convert.ToInt32(
+                        dgvNCC.CurrentRow.Cells["MaNCC"].Value);
+                }
+
+                bus.SaveNCC(
+                    txtTenNCC.Text,
+                    txtSDT.Text,
+                    txtDiaChi.Text,
+                    id);
+
+                MessageBox.Show("Lưu nhà cung cấp thành công.");
+                TaiDuLieu();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        void LuuPhieu()
+        {
+            try
+            {
+                if (chiTiet.Rows.Count == 0)
+                    throw new Exception("Chưa có vật tư trong phiếu.");
+
+                int maNCC = 0;
+
+                if (cboLoai.Text == "NHAP")
+                {
+                    if (cboNCC.SelectedValue == null)
+                        throw new Exception(
+                            "Phiếu nhập phải chọn nhà cung cấp.");
+
+                    maNCC = Convert.ToInt32(cboNCC.SelectedValue);
+                }
+
+                bus.LuuPhieu(
+                    cboLoai.Text, maNCC, chiTiet);
+
+                MessageBox.Show("Lưu phiếu kho thành công.");
+
+                chiTiet.Clear();
+                TaiDuLieu();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Không thể lưu phiếu: " + ex.Message);
+            }
+        }
+
+        void TaiDuLieu()
+        {
+            dgvVatTu.DataSource = bus.GetVatTu("");
+            dgvNCC.DataSource = bus.GetNhaCungCap();
+            dgvPhieu.DataSource = bus.GetPhieuKho();
+
+            DataTable vt = bus.GetVatTu("");
+
+            cboVatTu.DataSource = vt.Copy();
+            cboVatTu.DisplayMember = "TenVatTu";
+            cboVatTu.ValueMember = "MaVatTu";
+
+            DataTable ncc = bus.GetNhaCungCap();
+
+            cboNCC.DataSource = ncc;
+            cboNCC.DisplayMember = "TenNCC";
+            cboNCC.ValueMember = "MaNCC";
+        }
+    }
+}
