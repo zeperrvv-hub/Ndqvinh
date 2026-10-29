@@ -1,0 +1,310 @@
+using System;
+using System.Data;
+using System.Drawing;
+using System.Windows.Forms;
+using HotelManagement.BUS;
+
+namespace HotelManagement
+{
+    public class Form1 : Form
+    {
+        HotelBUS bus = new HotelBUS();
+
+        DataTable dtPhong = new DataTable();
+
+        DataGridView dgvPhong = new DataGridView();
+        DataGridView dgvPhieu = new DataGridView();
+        DataGridView dgvLoc = new DataGridView();
+
+        ComboBox cboPhong = new ComboBox();
+        ComboBox cboDichVu = new ComboBox();
+        ComboBox cboLoai = new ComboBox();
+        ComboBox cboTrangThai = new ComboBox();
+
+        TextBox txtTen = new TextBox();
+        TextBox txtCCCD = new TextBox();
+        TextBox txtSDT = new TextBox();
+        TextBox txtMaPhieu = new TextBox();
+
+        NumericUpDown numSL = new NumericUpDown();
+
+        public Form1()
+        {
+            Text = "HỆ THỐNG QUẢN LÝ KHÁCH SẠN";
+            Size = new Size(1100, 700);
+            StartPosition = FormStartPosition.CenterScreen;
+
+            TabControl tabs = new TabControl();
+            tabs.Dock = DockStyle.Fill;
+            Controls.Add(tabs);
+
+            // TAB 1: CHECK-IN
+            TabPage tab1 = new TabPage("Nhận phòng");
+            tabs.TabPages.Add(tab1);
+
+            FlowLayoutPanel p1 = new FlowLayoutPanel();
+            p1.Dock = DockStyle.Top;
+            p1.Height = 100;
+            p1.Padding = new Padding(8);
+            p1.AutoScroll = true;
+            tab1.Controls.Add(p1);
+
+            cboPhong.Width = 90;
+            txtTen.Width = 120;
+            txtCCCD.Width = 120;
+            txtSDT.Width = 110;
+
+            Button btnCheckIn = new Button();
+            btnCheckIn.Text = "Check-in";
+            btnCheckIn.Width = 90;
+
+            Button btnTaiLai = new Button();
+            btnTaiLai.Text = "Tải lại";
+            btnTaiLai.Width = 90;
+
+            p1.Controls.AddRange(new Control[]
+            {
+                new Label { Text="Phòng", AutoSize=true },
+                cboPhong,
+                new Label { Text="Họ tên", AutoSize=true },
+                txtTen,
+                new Label { Text="CCCD", AutoSize=true },
+                txtCCCD,
+                new Label { Text="Điện thoại", AutoSize=true },
+                txtSDT,
+                btnCheckIn,
+                btnTaiLai
+            });
+
+            dgvPhong.Dock = DockStyle.Fill;
+            dgvPhong.ReadOnly = true;
+            dgvPhong.AllowUserToAddRows = false;
+            dgvPhong.AutoSizeColumnsMode =
+                DataGridViewAutoSizeColumnsMode.Fill;
+            tab1.Controls.Add(dgvPhong);
+
+            // TAB 2: DỊCH VỤ VÀ CHECK-OUT
+            TabPage tab2 = new TabPage("Dịch vụ / Thanh toán");
+            tabs.TabPages.Add(tab2);
+
+            FlowLayoutPanel p2 = new FlowLayoutPanel();
+            p2.Dock = DockStyle.Top;
+            p2.Height = 90;
+            p2.Padding = new Padding(8);
+            tab2.Controls.Add(p2);
+
+            txtMaPhieu.Width = 80;
+            cboDichVu.Width = 150;
+            numSL.Minimum = 1;
+            numSL.Maximum = 999;
+
+            Button btnDichVu = new Button();
+            btnDichVu.Text = "Gọi dịch vụ";
+
+            Button btnCheckOut = new Button();
+            btnCheckOut.Text = "Check-out";
+
+            p2.Controls.AddRange(new Control[]
+            {
+                new Label { Text="Mã phiếu", AutoSize=true },
+                txtMaPhieu,
+                new Label { Text="Dịch vụ", AutoSize=true },
+                cboDichVu,
+                new Label { Text="Số lượng", AutoSize=true },
+                numSL,
+                btnDichVu,
+                btnCheckOut
+            });
+
+            dgvPhieu.Dock = DockStyle.Fill;
+            dgvPhieu.ReadOnly = true;
+            dgvPhieu.AllowUserToAddRows = false;
+            dgvPhieu.AutoSizeColumnsMode =
+                DataGridViewAutoSizeColumnsMode.Fill;
+            tab2.Controls.Add(dgvPhieu);
+
+            // TAB 3: LỌC PHÒNG
+            TabPage tab3 = new TabPage("Tìm kiếm phòng");
+            tabs.TabPages.Add(tab3);
+
+            FlowLayoutPanel p3 = new FlowLayoutPanel();
+            p3.Dock = DockStyle.Top;
+            p3.Height = 60;
+            p3.Padding = new Padding(8);
+            tab3.Controls.Add(p3);
+
+            cboLoai.Items.AddRange(new object[]
+            {
+                "Tất cả", "Đơn", "Đôi", "VIP"
+            });
+
+            cboTrangThai.Items.AddRange(new object[]
+            {
+                "Tất cả", "Trống", "Đang ở", "Đang dọn dẹp"
+            });
+
+            cboLoai.SelectedIndex = 0;
+            cboTrangThai.SelectedIndex = 0;
+
+            Button btnLoc = new Button();
+            btnLoc.Text = "Lọc phòng";
+
+            Button btnBoLoc = new Button();
+            btnBoLoc.Text = "Bỏ lọc";
+
+            p3.Controls.AddRange(new Control[]
+            {
+                new Label { Text="Loại phòng", AutoSize=true },
+                cboLoai,
+                new Label { Text="Trạng thái", AutoSize=true },
+                cboTrangThai,
+                btnLoc,
+                btnBoLoc
+            });
+
+            dgvLoc.Dock = DockStyle.Fill;
+            dgvLoc.ReadOnly = true;
+            dgvLoc.AllowUserToAddRows = false;
+            dgvLoc.AutoSizeColumnsMode =
+                DataGridViewAutoSizeColumnsMode.Fill;
+            tab3.Controls.Add(dgvLoc);
+
+            // SỰ KIỆN
+            btnCheckIn.Click += (s, e) =>
+            {
+                try
+                {
+                    bus.CheckIn(
+                        Convert.ToString(cboPhong.SelectedValue),
+                        txtTen.Text,
+                        txtCCCD.Text,
+                        txtSDT.Text);
+
+                    MessageBox.Show("Nhận phòng thành công!");
+                    TaiDuLieu();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            };
+
+            btnTaiLai.Click += (s, e) => TaiDuLieu();
+
+            btnDichVu.Click += (s, e) =>
+            {
+                try
+                {
+                    bus.AddService(
+                        int.Parse(txtMaPhieu.Text),
+                        Convert.ToInt32(cboDichVu.SelectedValue),
+                        (int)numSL.Value);
+
+                    MessageBox.Show("Đã thêm dịch vụ.");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            };
+
+            btnCheckOut.Click += (s, e) =>
+            {
+                try
+                {
+                    decimal tien = bus.CheckOut(
+                        int.Parse(txtMaPhieu.Text));
+
+                    MessageBox.Show(
+                        "Tổng thanh toán: " + tien.ToString("N0") + " đ");
+
+                    TaiDuLieu();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            };
+
+            btnLoc.Click += (s, e) => LocPhong();
+            btnBoLoc.Click += (s, e) =>
+            {
+                dtPhong.DefaultView.RowFilter = "";
+                dgvLoc.DataSource = dtPhong;
+            };
+
+            dgvPhieu.CellClick += (s, e) =>
+            {
+                if (e.RowIndex >= 0)
+                {
+                    txtMaPhieu.Text =
+                        dgvPhieu.Rows[e.RowIndex]
+                        .Cells["MaPhieu"].Value.ToString();
+                }
+            };
+
+            Load += (s, e) =>
+            {
+                try
+                {
+                    DataTable dv = bus.GetServices();
+                    cboDichVu.DataSource = dv;
+                    cboDichVu.DisplayMember = "TenDV";
+                    cboDichVu.ValueMember = "MaDV";
+
+                    TaiDuLieu();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        "Lỗi kết nối CSDL: " + ex.Message);
+                }
+            };
+        }
+
+        void TaiDuLieu()
+        {
+            dtPhong = bus.GetRooms();
+
+            dgvPhong.DataSource = dtPhong;
+            dgvLoc.DataSource = dtPhong;
+
+            DataTable phongTrong = dtPhong.Clone();
+
+            foreach (DataRow row in dtPhong.Rows)
+            {
+                if (row["TrangThai"].ToString() == "Trống")
+                    phongTrong.ImportRow(row);
+            }
+
+            cboPhong.DataSource = phongTrong;
+            cboPhong.DisplayMember = "SoPhong";
+            cboPhong.ValueMember = "SoPhong";
+
+            dgvPhieu.DataSource = bus.GetActiveStays();
+        }
+
+        void LocPhong()
+        {
+            string loai = cboLoai.Text;
+            string trangThai = cboTrangThai.Text;
+
+            string filter = "";
+
+            if (loai != "Tất cả")
+                filter = "LoaiPhong = '" + loai.Replace("'", "''") + "'";
+
+            if (trangThai != "Tất cả")
+            {
+                if (filter != "")
+                    filter += " AND ";
+
+                filter += "TrangThai = '" +
+                    trangThai.Replace("'", "''") + "'";
+            }
+
+            dtPhong.DefaultView.RowFilter = filter;
+            dgvLoc.DataSource = dtPhong.DefaultView;
+        }
+    }
+}

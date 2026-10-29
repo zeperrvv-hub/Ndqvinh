@@ -1,0 +1,50 @@
+using System;
+using System.Data;
+using HotelManagement.DAL;
+
+namespace HotelManagement.BUS
+{
+    public class HotelBUS
+    {
+        HotelDAL dal = new HotelDAL();
+
+        public DataTable GetRooms()
+        {
+            return dal.GetRooms();
+        }
+
+        public DataTable GetServices()
+        {
+            return dal.GetServices();
+        }
+
+        public DataTable GetActiveStays()
+        {
+            return dal.GetActiveStays();
+        }
+
+        public void CheckIn(
+            string room, string name, string cccd, string phone)
+        {
+            if (string.IsNullOrWhiteSpace(room) ||
+                string.IsNullOrWhiteSpace(name) ||
+                string.IsNullOrWhiteSpace(cccd))
+            {
+                throw new Exception(
+                    "Phải nhập phòng, họ tên và CCCD.");
+            }
+
+            dal.CheckIn(room, name, cccd, phone);
+        }
+
+        public void AddService(int invoice, int service, int qty)
+        {
+            dal.AddService(invoice, service, qty);
+        }
+
+        public decimal CheckOut(int invoice)
+        {
+            return dal.CheckOut(invoice);
+        }
+    }
+}

@@ -1,0 +1,243 @@
+using System;
+using System.Data;
+using System.Data.SqlClient;
+
+namespace HotelManagement.DAL
+{
+    public class HotelDAL
+    {
+        public DataTable GetRooms()
+        {
+            DataTable dt = new DataTable();
+
+            using (SqlConnection c = DB.GetConnection())
+            {
+                SqlDataAdapter da = new SqlDataAdapter(
+                    "SELECT * FROM Phong ORDER BY SoPhong", c);
+                da.Fill(dt);
+            }
+
+            return dt;
+        }
+
+        public DataTable GetServices()
+        {
+            DataTable dt = new DataTable();
+
+            using (SqlConnection c = DB.GetConnection())
+            {
+                SqlDataAdapter da = new SqlDataAdapter(
+                    "SELECT * FROM DichVu ORDER BY TenDV", c);
+                da.Fill(dt);
+            }
+
+            return dt;
+        }
+
+        public DataTable GetActiveStays()
+        {
+            DataTable dt = new DataTable();
+
+            using (SqlConnection c = DB.GetConnection())
+            {
+                SqlDataAdapter da = new SqlDataAdapter(
+                    @"SELECT pp.MaPhieu, pp.SoPhong,
+                      kh.HoTen, kh.CCCD, pp.NgayNhanPhong
+                      FROM PhieuDatPhong pp
+                      JOIN KhachHang kh ON pp.MaKH=kh.MaKH
+                      WHERE pp.NgayTraPhong IS NULL", c);
+
+                da.Fill(dt);
+            }
+
+            return dt;
+        }
+
+        public void CheckIn(
+            string room, string name, string cccd, string phone)
+        {
+            using (SqlConnection c = DB.GetConnection())
+            {
+                c.Open();
+                SqlTransaction trans = c.BeginTransaction();
+
+                try
+                {
+                    int maKH = 0;
+
+                    SqlCommand find = new SqlCommand(
+                        "SELECT MaKH FROM KhachHang WHERE CCCD=@cccd",
+                        c, trans);
+
+                    find.Parameters.Add("@cccd", SqlDbType.VarChar, 20)
+                        .Value = cccd.Trim();
+
+                    object result = find.ExecuteScalar();
+
+                    if (result != null)
+                    {
+                        maKH = Convert.ToInt32(result);
+                    }
+                    else
+                    {
+                        SqlCommand insertKH = new SqlCommand(
+                            @"INSERT INTO KhachHang
+                              (HoTen,CCCD,SoDienThoai)
+                              VALUES(@ten,@cccd,@phone);
+                              SELECT SCOPE_IDENTITY();", c, trans);
+
+                        insertKH.Parameters.Add(
+                            "@ten", SqlDbType.NVarChar, 100)
+                            .Value = name.Trim();
+
+                        insertKH.Parameters.Add(
+                            "@cccd", SqlDbType.VarChar, 20)
+                            .Value = cccd.Trim();
+
+                        insertKH.Parameters.Add(
+                            "@phone", SqlDbType.VarChar, 15)
+                            .Value = phone.Trim();
+
+                        maKH = Convert.ToInt32(
+                            insertKH.ExecuteScalar());
+                    }
+
+                    SqlCommand check = new SqlCommand(
+                        "SELECT TrangThai FROM Phong WITH(UPDLOCK) WHERE SoPhong=@p",
+                        c, trans);
+
+                    check.Parameters.Add("@p", SqlDbType.VarChar, 10)
+                        .Value = room;
+
+                    object status = check.ExecuteScalar();
+
+                    if (status == null || status.ToString() != "Trống")
+                        throw new Exception("Phòng không còn trống.");
+
+                    SqlCommand insertPhieu = new SqlCommand(
+                        @"INSERT INTO PhieuDatPhong(SoPhong,MaKH)
+                          VALUES(@p,@kh);
+                          UPDATE Phong SET TrangThai=N'Đang ở'
+                          WHERE SoPhong=@p;", c, trans);
+
+                    insertPhieu.Parameters.Add(
+                        "@p", SqlDbType.VarChar, 10).Value = room;
+
+                    insertPhieu.Parameters.Add(
+                        "@kh", SqlDbType.Int).Value = maKH;
+
+                    insertPhieu.ExecuteNonQuery();
+
+                    trans.Commit();
+                }
+                catch
+                {
+                    trans.Rollback();
+                    throw;
+                }
+            }
+        }
+
+        public void AddService(int invoice, int service, int qty)
+        {
+            if (qty <= 0)
+                throw new Exception("Số lượng phải lớn hơn 0.");
+
+            using (SqlConnection c = DB.GetConnection())
+            {
+                c.Open();
+
+                SqlCommand cmd = new SqlCommand(
+                    @"INSERT INTO SuDungDichVu(MaPhieu,MaDV,SoLuong)
+                      SELECT @p,@dv,@sl
+                      WHERE EXISTS(
+                          SELECT 1 FROM PhieuDatPhong
+                          WHERE MaPhieu=@p AND NgayTraPhong IS NULL
+                      )", c);
+
+                cmd.Parameters.Add("@p", SqlDbType.Int).Value = invoice;
+                cmd.Parameters.Add("@dv", SqlDbType.Int).Value = service;
+                cmd.Parameters.Add("@sl", SqlDbType.Int).Value = qty;
+
+                if (cmd.ExecuteNonQuery() == 0)
+                    throw new Exception("Phiếu không tồn tại hoặc đã trả phòng.");
+            }
+        }
+
+        public decimal CheckOut(int invoice)
+        {
+            using (SqlConnection c = DB.GetConnection())
+            {
+                c.Open();
+                SqlTransaction trans = c.BeginTransaction();
+
+                try
+                {
+                    string room;
+                    DateTime checkIn;
+                    decimal pricePerHour;
+
+                    SqlCommand get = new SqlCommand(
+                        @"SELECT pp.SoPhong,pp.NgayNhanPhong,p.GiaTheoGio
+                          FROM PhieuDatPhong pp
+                          JOIN Phong p ON pp.SoPhong=p.SoPhong
+                          WHERE pp.MaPhieu=@id AND pp.NgayTraPhong IS NULL",
+                        c, trans);
+
+                    get.Parameters.Add("@id", SqlDbType.Int).Value = invoice;
+
+                    using (SqlDataReader r = get.ExecuteReader())
+                    {
+                        if (!r.Read())
+                            throw new Exception("Không tìm thấy phiếu đang ở.");
+
+                        room = r["SoPhong"].ToString();
+                        checkIn = Convert.ToDateTime(r["NgayNhanPhong"]);
+                        pricePerHour = Convert.ToDecimal(r["GiaTheoGio"]);
+                    }
+
+                    SqlCommand service = new SqlCommand(
+                        @"SELECT ISNULL(SUM(sd.SoLuong*dv.DonGia),0)
+                          FROM SuDungDichVu sd
+                          JOIN DichVu dv ON sd.MaDV=dv.MaDV
+                          WHERE sd.MaPhieu=@id", c, trans);
+
+                    service.Parameters.Add("@id", SqlDbType.Int).Value = invoice;
+
+                    decimal serviceTotal =
+                        Convert.ToDecimal(service.ExecuteScalar());
+
+                    double hours = Math.Max(
+                        1, Math.Ceiling((DateTime.Now - checkIn).TotalHours));
+
+                    decimal total = (decimal)hours * pricePerHour
+                                    + serviceTotal;
+
+                    SqlCommand update = new SqlCommand(
+                        @"UPDATE PhieuDatPhong
+                          SET NgayTraPhong=GETDATE(),
+                              TongTienThanhToan=@t
+                          WHERE MaPhieu=@id;
+
+                          UPDATE Phong
+                          SET TrangThai=N'Đang dọn dẹp'
+                          WHERE SoPhong=@p;", c, trans);
+
+                    update.Parameters.Add("@t", SqlDbType.Decimal).Value = total;
+                    update.Parameters.Add("@id", SqlDbType.Int).Value = invoice;
+                    update.Parameters.Add("@p", SqlDbType.VarChar, 10).Value = room;
+
+                    update.ExecuteNonQuery();
+                    trans.Commit();
+
+                    return total;
+                }
+                catch
+                {
+                    trans.Rollback();
+                    throw;
+                }
+            }
+        }
+    }
+}
