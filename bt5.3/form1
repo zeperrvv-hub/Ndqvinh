@@ -1,0 +1,337 @@
+using System;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Windows.Forms;
+
+namespace CafePOS
+{
+    public class Form1 : Form
+    {
+        FlowLayoutPanel pnlBan = new FlowLayoutPanel();
+        DataGridView dgvHoaDon = new DataGridView();
+        ComboBox cboDanhMuc = new ComboBox();
+        ComboBox cboMon = new ComboBox();
+        NumericUpDown numSL = new NumericUpDown();
+        Label lblBan = new Label();
+        Label lblTong = new Label();
+
+        int maBan = 0;
+        int maHoaDon = 0;
+
+        public Form1()
+        {
+            Text = "QUẢN LÝ QUÁN CAFE";
+            Size = new Size(1100, 650);
+            StartPosition = FormStartPosition.CenterScreen;
+
+            GroupBox gbBan = new GroupBox();
+            gbBan.Text = "Sơ đồ bàn";
+            gbBan.SetBounds(10, 10, 300, 580);
+            Controls.Add(gbBan);
+
+            pnlBan.Dock = DockStyle.Fill;
+            pnlBan.AutoScroll = true;
+            gbBan.Controls.Add(pnlBan);
+
+            lblBan.SetBounds(330, 15, 300, 30);
+            lblBan.Font = new Font("Arial", 12, FontStyle.Bold);
+            Controls.Add(lblBan);
+
+            cboDanhMuc.SetBounds(330, 55, 150, 30);
+            cboMon.SetBounds(490, 55, 200, 30);
+            numSL.SetBounds(700, 55, 60, 30);
+            numSL.Minimum = 1;
+            numSL.Maximum = 100;
+            Controls.AddRange(new Control[]
+            {
+                cboDanhMuc, cboMon, numSL
+            });
+
+            Button btnThem = new Button();
+            btnThem.Text = "Thêm món";
+            btnThem.SetBounds(770, 55, 100, 30);
+            btnThem.Click += (s, e) => ThemMon();
+            Controls.Add(btnThem);
+
+            Button btnThanhToan = new Button();
+            btnThanhToan.Text = "Thanh toán";
+            btnThanhToan.SetBounds(880, 55, 110, 30);
+            btnThanhToan.Click += (s, e) => ThanhToan();
+            Controls.Add(btnThanhToan);
+
+            dgvHoaDon.SetBounds(330, 100, 650, 400);
+            dgvHoaDon.ReadOnly = true;
+            dgvHoaDon.AllowUserToAddRows = false;
+            dgvHoaDon.AutoSizeColumnsMode =
+                DataGridViewAutoSizeColumnsMode.Fill;
+            Controls.Add(dgvHoaDon);
+
+            lblTong.SetBounds(330, 515, 650, 35);
+            lblTong.Font = new Font("Arial", 14, FontStyle.Bold);
+            Controls.Add(lblTong);
+
+            cboDanhMuc.SelectedIndexChanged +=
+                (s, e) => NapMon();
+
+            Load += (s, e) =>
+            {
+                NapDanhMuc();
+                NapBan();
+            };
+        }
+
+        void NapDanhMuc()
+        {
+            using (SqlConnection c = DB.KetNoi())
+            {
+                SqlDataAdapter da = new SqlDataAdapter(
+                    "SELECT * FROM DanhMuc", c);
+
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+
+                cboDanhMuc.DataSource = dt;
+                cboDanhMuc.DisplayMember = "TenDanhMuc";
+                cboDanhMuc.ValueMember = "MaDanhMuc";
+            }
+        }
+
+        void NapMon()
+        {
+            if (!(cboDanhMuc.SelectedValue is int))
+                return;
+
+            using (SqlConnection c = DB.KetNoi())
+            {
+                SqlDataAdapter da = new SqlDataAdapter(
+                    @"SELECT MaMon, TenMon, DonGia
+                      FROM MonAn
+                      WHERE MaDanhMuc = @id", c);
+
+                da.SelectCommand.Parameters.AddWithValue(
+                    "@id", cboDanhMuc.SelectedValue);
+
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+
+                cboMon.DataSource = dt;
+                cboMon.DisplayMember = "TenMon";
+                cboMon.ValueMember = "MaMon";
+            }
+        }
+
+        void NapBan()
+        {
+            pnlBan.Controls.Clear();
+
+            using (SqlConnection c = DB.KetNoi())
+            {
+                c.Open();
+
+                SqlCommand cmd = new SqlCommand(
+                    "SELECT * FROM BanAn ORDER BY MaBan", c);
+
+                SqlDataReader r = cmd.ExecuteReader();
+
+                while (r.Read())
+                {
+                    int id = Convert.ToInt32(r["MaBan"]);
+                    string ten = r["TenBan"].ToString();
+                    string trangThai = r["TrangThai"].ToString();
+
+                    Button b = new Button();
+                    b.Text = ten + "\n" + trangThai;
+                    b.Tag = id;
+                    b.Size = new Size(115, 75);
+                    b.BackColor = trangThai == "Trống"
+                        ? Color.LightGreen
+                        : Color.LightCoral;
+
+                    b.Click += (s, e) =>
+                    {
+                        ChonBan((int)b.Tag);
+                    };
+
+                    pnlBan.Controls.Add(b);
+                }
+            }
+        }
+
+        void ChonBan(int id)
+        {
+            maBan = id;
+            maHoaDon = 0;
+            lblBan.Text = "Đang chọn bàn: " + id;
+
+            using (SqlConnection c = DB.KetNoi())
+            {
+                c.Open();
+
+                SqlCommand cmd = new SqlCommand(
+                    @"SELECT TOP 1 MaHoaDon
+                      FROM HoaDon
+                      WHERE MaBan = @ban AND TrangThai = 0
+                      ORDER BY MaHoaDon DESC", c);
+
+                cmd.Parameters.AddWithValue("@ban", id);
+
+                object kq = cmd.ExecuteScalar();
+
+                if (kq != null)
+                    maHoaDon = Convert.ToInt32(kq);
+            }
+
+            NapHoaDon();
+        }
+
+        void NapHoaDon()
+        {
+            DataTable dt = new DataTable();
+
+            using (SqlConnection c = DB.KetNoi())
+            {
+                SqlDataAdapter da = new SqlDataAdapter(
+                    @"SELECT m.TenMon, ct.SoLuong, ct.DonGia,
+                      ct.SoLuong * ct.DonGia AS ThanhTien
+                      FROM ChiTietHoaDon ct
+                      JOIN MonAn m ON ct.MaMon = m.MaMon
+                      WHERE ct.MaHoaDon = @id", c);
+
+                da.SelectCommand.Parameters.AddWithValue(
+                    "@id", maHoaDon);
+
+                da.Fill(dt);
+            }
+
+            dgvHoaDon.DataSource = dt;
+
+            decimal tong = 0;
+
+            foreach (DataRow row in dt.Rows)
+                tong += Convert.ToDecimal(row["ThanhTien"]);
+
+            lblTong.Text = "Tổng tiền: " + tong.ToString("N0") + " đ";
+        }
+
+        void ThemMon()
+        {
+            if (maBan == 0 || cboMon.SelectedValue == null)
+            {
+                MessageBox.Show("Hãy chọn bàn và món ăn.");
+                return;
+            }
+
+            using (SqlConnection c = DB.KetNoi())
+            {
+                c.Open();
+
+                SqlTransaction trans = c.BeginTransaction();
+
+                try
+                {
+                    if (maHoaDon == 0)
+                    {
+                        SqlCommand cmdHD = new SqlCommand(
+                            @"INSERT INTO HoaDon(MaBan)
+                              VALUES(@ban);
+                              SELECT SCOPE_IDENTITY();",
+                            c, trans);
+
+                        cmdHD.Parameters.AddWithValue("@ban", maBan);
+
+                        maHoaDon = Convert.ToInt32(
+                            cmdHD.ExecuteScalar());
+                    }
+
+                    SqlCommand cmd = new SqlCommand(
+                        @"IF EXISTS(
+                            SELECT 1 FROM ChiTietHoaDon
+                            WHERE MaHoaDon=@hd AND MaMon=@mon
+                          )
+                          UPDATE ChiTietHoaDon
+                          SET SoLuong = SoLuong + @sl
+                          WHERE MaHoaDon=@hd AND MaMon=@mon
+                          ELSE
+                          INSERT INTO ChiTietHoaDon
+                              (MaHoaDon, MaMon, SoLuong, DonGia)
+                          SELECT @hd, MaMon, @sl, DonGia
+                          FROM MonAn WHERE MaMon=@mon;
+
+                          UPDATE BanAn
+                          SET TrangThai=N'Có khách'
+                          WHERE MaBan=@ban;",
+                        c, trans);
+
+                    cmd.Parameters.AddWithValue("@hd", maHoaDon);
+                    cmd.Parameters.AddWithValue(
+                        "@mon", cboMon.SelectedValue);
+                    cmd.Parameters.AddWithValue("@sl", numSL.Value);
+                    cmd.Parameters.AddWithValue("@ban", maBan);
+
+                    cmd.ExecuteNonQuery();
+                    trans.Commit();
+
+                    NapHoaDon();
+                    NapBan();
+                }
+                catch (Exception ex)
+                {
+                    trans.Rollback();
+                    MessageBox.Show(ex.Message);
+                }
+            }
+        }
+
+        void ThanhToan()
+        {
+            if (maHoaDon == 0)
+            {
+                MessageBox.Show("Bàn chưa có hóa đơn.");
+                return;
+            }
+
+            using (SqlConnection c = DB.KetNoi())
+            {
+                c.Open();
+                SqlTransaction trans = c.BeginTransaction();
+
+                try
+                {
+                    SqlCommand cmd = new SqlCommand(
+                        @"UPDATE HoaDon
+                          SET TongTien = (
+                              SELECT ISNULL(SUM(SoLuong * DonGia), 0)
+                              FROM ChiTietHoaDon
+                              WHERE MaHoaDon=@hd
+                          ),
+                          GioRa=GETDATE(),
+                          TrangThai=1
+                          WHERE MaHoaDon=@hd;
+
+                          UPDATE BanAn
+                          SET TrangThai=N'Trống'
+                          WHERE MaBan=@ban;",
+                        c, trans);
+
+                    cmd.Parameters.AddWithValue("@hd", maHoaDon);
+                    cmd.Parameters.AddWithValue("@ban", maBan);
+
+                    cmd.ExecuteNonQuery();
+                    trans.Commit();
+
+                    MessageBox.Show("Thanh toán thành công.");
+
+                    maHoaDon = 0;
+                    NapHoaDon();
+                    NapBan();
+                }
+                catch (Exception ex)
+                {
+                    trans.Rollback();
+                    MessageBox.Show(ex.Message);
+                }
+            }
+        }
+    }
+}
